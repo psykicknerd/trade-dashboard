@@ -54,3 +54,15 @@ Run API integration tests against initialized, seeded PostgreSQL:
 ```powershell
 npm run test --workspace=backend
 ```
+
+## Background trade pull
+
+`POST /api/trades/pull` creates a `RUNNING` job and replies with `202 Accepted` immediately. The in-process worker then makes short, sequential requests to `GET /getTrades`, persists each batch in `trades`, and records progress in `pull_jobs`.
+
+```text
+POST /api/trades/pull
+GET  /api/trades
+GET  /api/trades/pull/:jobId
+```
+
+Only one pull may run at a time. A second request receives `409 Conflict` with the active job ID. The database's partial unique index enforces that rule even if requests arrive concurrently. If a BSE request or database operation fails, the job is marked `FAILED` with its error message.

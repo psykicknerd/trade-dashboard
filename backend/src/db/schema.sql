@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS pull_jobs (
 );
 
 CREATE INDEX IF NOT EXISTS pull_jobs_status_idx ON pull_jobs (status);
+CREATE UNIQUE INDEX IF NOT EXISTS one_active_pull_job_idx
+  ON pull_jobs ((true))
+  WHERE status IN ('PENDING', 'RUNNING');
 
 -- Seeded data source for the Mock BSE API to be added in Phase 2.
 CREATE TABLE IF NOT EXISTS mock_bse_trades (
