@@ -1,13 +1,21 @@
 import cors from "cors";
 import express from "express";
+import { checkDatabaseConnection } from "./db/pool.js";
+import mockBseRouter from "./mock-bse/mock-bse-router.js";
 
 const app = express();
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173" }));
 app.use(express.json());
+app.use(mockBseRouter);
 
-app.get("/api/health", (_request, response) => {
-  response.status(200).json({ status: "ok", service: "trade-dashboard-api" });
+app.get("/api/health", async (_request, response) => {
+  const database = await checkDatabaseConnection();
+  response.status(database ? 200 : 503).json({
+    status: database ? "ok" : "degraded",
+    service: "trade-dashboard-api",
+    database: database ? "connected" : "unavailable"
+  });
 });
 
 export default app;
