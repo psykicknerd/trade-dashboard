@@ -61,6 +61,14 @@ export async function getActivePullJob(): Promise<PullJob | null> {
   return result.rows[0] ? toPullJob(result.rows[0]) : null;
 }
 
+export async function getLatestPullJob(): Promise<PullJob | null> {
+  const result = await pool.query<PullJobRow>(
+    `SELECT id, status, started_at, completed_at, records_processed, error, created_at
+     FROM pull_jobs ORDER BY created_at DESC LIMIT 1`,
+  );
+  return result.rows[0] ? toPullJob(result.rows[0]) : null;
+}
+
 export async function updatePullJobProgress(id: string, recordsProcessed: number): Promise<void> {
   await pool.query(
     "UPDATE pull_jobs SET records_processed = $2 WHERE id = $1 AND status = 'RUNNING'",

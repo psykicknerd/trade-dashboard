@@ -9,6 +9,7 @@ import {
   type PullJob,
 } from "../db/repositories/pull-job-repository.js";
 import type { TradeRecord } from "../db/types.js";
+import { eventManager } from "../realtime/event-manager.js";
 
 interface BseBatchResponse {
   trades: TradeRecord[];
@@ -49,6 +50,12 @@ async function runTradePull(jobId: string): Promise<void> {
       const inserted = await insertTrades(batch.trades);
       recordsProcessed += batch.trades.length;
       await updatePullJobProgress(jobId, recordsProcessed);
+      eventManager.publish("trades_updated", {
+        jobId,
+        recordsAdded: inserted,
+        totalProcessed: recordsProcessed,
+        totalRecords: batch.pagination.total,
+      });
       console.log(`[Pull Job ${jobId}] Processed ${batch.trades.length} trades (${inserted} newly saved)`);
 
       if (!batch.pagination.hasMore) break;
@@ -57,10 +64,17 @@ async function runTradePull(jobId: string): Promise<void> {
     }
 
     await completePullJob(jobId, recordsProcessed);
+    eventManager.publish("pull_completed", {
+      jobId,
+      status: "COMPLETED",
+      recordsProcessed,
+      totalRecords: recordsProcessed,
+    });
     console.log(`[Pull Job ${jobId}] Completed (${recordsProcessed} records processed)`);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown trade pull failure.";
     await failPullJob(jobId, message);
+    eventManager.publish("pull_failed", { jobId, status: "FAILED", error: message });
     console.error(`[Pull Job ${jobId}] Failed: ${message}`);
   }
 }

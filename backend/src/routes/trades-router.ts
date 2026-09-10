@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getPullJob } from "../db/repositories/pull-job-repository.js";
+import { getLatestPullJob, getPullJob } from "../db/repositories/pull-job-repository.js";
 import { listPersistedTrades } from "../db/repositories/trade-repository.js";
 import { PullAlreadyRunningError, startTradePull } from "../jobs/trade-pull-job.js";
 
@@ -25,6 +25,22 @@ tradesRouter.post("/api/trades/pull", async (_request, response, next) => {
 tradesRouter.get("/api/trades", async (_request, response, next) => {
   try {
     response.json({ trades: await listPersistedTrades() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+tradesRouter.get("/api/trades/pull", async (_request, response, next) => {
+  try {
+    const job = await getLatestPullJob();
+    response.json({ job: job ? {
+      jobId: job.id,
+      status: job.status,
+      recordsProcessed: job.recordsProcessed,
+      startedAt: job.startedAt,
+      completedAt: job.completedAt,
+      error: job.error,
+    } : null });
   } catch (error) {
     next(error);
   }

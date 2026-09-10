@@ -66,3 +66,19 @@ GET  /api/trades/pull/:jobId
 ```
 
 Only one pull may run at a time. A second request receives `409 Conflict` with the active job ID. The database's partial unique index enforces that rule even if requests arrive concurrently. If a BSE request or database operation fails, the job is marked `FAILED` with its error message.
+
+## Real-time events (SSE)
+
+`GET /api/events` opens a Server-Sent Events connection from a browser to the backend. This is separate from BSE batch requests: the BSE calls remain short-lived, while SSE only pushes backend-to-browser notifications.
+
+| Event | Payload |
+| --- | --- |
+| `trades_updated` | `jobId`, `recordsAdded`, `totalProcessed` |
+| `pull_completed` | `jobId`, `status`, `recordsProcessed` |
+| `pull_failed` | `jobId`, `status`, `error` |
+
+Verify the stream in a terminal with `curl.exe -N http://localhost:3001/api/events`, then start a pull in a second terminal. Events appear without polling or a page refresh.
+
+## Dashboard
+
+The React dashboard loads persisted records through `GET /api/trades` immediately, then opens an `EventSource` connection to `/api/events`. Each `trades_updated` event refreshes the displayed persisted records and updates progress; completion and failure events update status. There is no `setInterval`, page refresh, or cron job.
