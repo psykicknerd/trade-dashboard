@@ -1,7 +1,17 @@
 import { Router } from "express";
-import { getLatestPullJob, getPullJob } from "../db/repositories/pull-job-repository.js";
-import { listPersistedTrades } from "../db/repositories/trade-repository.js";
-import { PullAlreadyRunningError, startTradePull } from "../jobs/trade-pull-job.js";
+import {
+  getLatestPullJob,
+  getPullJob,
+} from "../db/repositories/pull-job-repository.js";
+import {
+  clearPersistedTrades,
+  getPersistedTradeCount,
+  listPersistedTrades,
+} from "../db/repositories/trade-repository.js";
+import {
+  PullAlreadyRunningError,
+  startTradePull,
+} from "../jobs/trade-pull-job.js";
 
 const tradesRouter = Router();
 
@@ -24,7 +34,20 @@ tradesRouter.post("/api/trades/pull", async (_request, response, next) => {
 
 tradesRouter.get("/api/trades", async (_request, response, next) => {
   try {
-    response.json({ trades: await listPersistedTrades() });
+    const [trades, totalCount] = await Promise.all([
+      listPersistedTrades(),
+      getPersistedTradeCount(),
+    ]);
+    response.json({ trades, totalCount });
+  } catch (error) {
+    next(error);
+  }
+});
+
+tradesRouter.post("/api/trades/reset", async (_request, response, next) => {
+  try {
+    await clearPersistedTrades();
+    response.json({ status: "cleared", totalCount: 0 });
   } catch (error) {
     next(error);
   }
@@ -33,14 +56,18 @@ tradesRouter.get("/api/trades", async (_request, response, next) => {
 tradesRouter.get("/api/trades/pull", async (_request, response, next) => {
   try {
     const job = await getLatestPullJob();
-    response.json({ job: job ? {
-      jobId: job.id,
-      status: job.status,
-      recordsProcessed: job.recordsProcessed,
-      startedAt: job.startedAt,
-      completedAt: job.completedAt,
-      error: job.error,
-    } : null });
+    response.json({
+      job: job
+        ? {
+            jobId: job.id,
+            status: job.status,
+            recordsProcessed: job.recordsProcessed,
+            startedAt: job.startedAt,
+            completedAt: job.completedAt,
+            error: job.error,
+          }
+        : null,
+    });
   } catch (error) {
     next(error);
   }

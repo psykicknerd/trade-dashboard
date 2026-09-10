@@ -23,14 +23,18 @@ export interface PullJob {
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, options);
   if (!response.ok) {
-    const body = await response.json().catch(() => null) as { error?: string } | null;
-    throw new Error(body?.error ?? `Request failed with HTTP ${response.status}.`);
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(
+      body?.error ?? `Request failed with HTTP ${response.status}.`,
+    );
   }
   return response.json() as Promise<T>;
 }
 
 export function getTrades() {
-  return request<{ trades: Trade[] }>("/api/trades");
+  return request<{ trades: Trade[]; totalCount: number }>("/api/trades");
 }
 
 export function getLatestPullJob() {
@@ -38,7 +42,15 @@ export function getLatestPullJob() {
 }
 
 export function startPull() {
-  return request<{ jobId: string; status: PullStatus }>("/api/trades/pull", { method: "POST" });
+  return request<{ jobId: string; status: PullStatus }>("/api/trades/pull", {
+    method: "POST",
+  });
+}
+
+export function resetTrades() {
+  return request<{ status: string; totalCount: number }>("/api/trades/reset", {
+    method: "POST",
+  });
 }
 
 export function eventsUrl() {
