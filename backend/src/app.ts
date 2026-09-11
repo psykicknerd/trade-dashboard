@@ -15,7 +15,7 @@ app.use(
         ? true
         : clientOrigin.split(",").map((s) => s.trim())
       : true,
-  })
+  }),
 );
 app.use(express.json());
 app.use(mockBseRouter);
@@ -27,7 +27,7 @@ app.get("/api/health", async (_request, response) => {
   response.status(database ? 200 : 503).json({
     status: database ? "ok" : "degraded",
     service: "trade-dashboard-api",
-    database: database ? "connected" : "unavailable"
+    database: database ? "connected" : "unavailable",
   });
 });
 
